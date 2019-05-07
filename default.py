@@ -36,7 +36,7 @@ __resource__ = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
 
 sys.path.append (__resource__)
 
-saveintervalsecs = 60 #default. Configured in settings.
+saveintervalsecs = 20 #default. Configured in settings.
 resumeonstartup = False #default. Configured in sttings
 autoplayrandom = False #default. Configured in settings
 currentPlayingFilePath = '' #The str full path of the video file currently playing
