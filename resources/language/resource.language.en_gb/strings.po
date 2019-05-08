@@ -1,8 +1,8 @@
 # XBMC Media Center language file
 # Addon Name: XBMC Playback Resumer
 # Addon id: script.service.playbackresumer
-# Addon version: 1.0.2
-# Addon Provider: bradvido88
+# Addon version: 1.2.0
+# Addon Provider: bradvido88,bossanova808
 msgid ""
 msgstr ""
 "Project-Id-Version: XBMC-Addons\n"
@@ -22,7 +22,7 @@ msgid "Periodically sets the resume point while videos are playing and optionall
 msgstr ""
 
 msgctxt "Addon Description"
-msgid "This addon runs in the background as a service and will periodically update the resume point while videos are playing. It will also automatically resume a video if XBMC was shutdown while playing it. See setting to configure how often the resume point is set and whether to automatically resume. \n		Note: Updating the native XBMC resume point (to get \"Resume from XX:XX\" dialog when selecting a video) is only supported on Gotham versions built after 1/11/2014\n    "
+msgid "This addon runs in the background as a service and will periodically update the resume point while videos are playing. It will also automatically resume a video if XBMC was shutdown while playing it. See setting to configure how often the resume point is set and whether to automatically resume."
 msgstr ""
 
 
