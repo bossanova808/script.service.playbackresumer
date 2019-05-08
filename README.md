@@ -4,7 +4,7 @@ A simple addon to periodically update the resume point of the currently playing 
 
 Optionally atuomatically resume playback automatically when xbmc is restarted after a crash, or trigger playback of a random video.
 
-Original code by Bradvido recovered from the main Kodi forum thread on this, and (for now at least) updated maintained in this repo by bossanova808.
+Original code by bradvido88 recovered from the main Kodi forum thread on this, and from May 2019 updated & maintained in this repo by bossanova808.
 
 Main Kodi forum thread here:
 http://forum.kodi.tv/showthread.php?tid=183084
