@@ -2,8 +2,8 @@
 
 import xbmc
 import xbmcaddon
-import xbmcgui
 import os
+import sys
 import json
 from time import time
 from random import randint
@@ -15,27 +15,26 @@ __version__ = __addon__.getAddonInfo('version')
 __icon__ = __addon__.getAddonInfo('icon')
 __ID__ = __addon__.getAddonInfo('id')
 __kodiversion__ = float(xbmcaddon.Addon('xbmc.addon').getAddonInfo('version')[0:4])
-__language__ = __addon__.getLocalizedString
-__profile__ = xbmc.translatePath( __addon__.getAddonInfo('profile') ).decode('utf-8') #addon_data folder
-__resource__ = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
+__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))  # addon_data folder
+__resource__ = xbmc.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
 
-sys.path.append (__resource__)
+sys.path.append(__resource__)
 
-saveintervalsecs = 20 # default. Configured in settings.
-resumeonstartup = False # default. Configured in sttings
-autoplayrandom = False # default. Configured in settings
-currentPlayingFilePath = '' # The str full path of the video file currently playing
-typeOfVideo = 'unknown' # The type of video currently playing (episode, movie, musicvideo, etc.)
+saveintervalsecs = 20  # default. Configured in settings.
+resumeonstartup = False  # default. Configured in sttings
+autoplayrandom = False  # default. Configured in settings
+currentPlayingFilePath = ''  # The str full path of the video file currently playing
+typeOfVideo = 'unknown'  # The type of video currently playing (episode, movie, musicvideo, etc.)
 libraryId = -1  # The id of the video currently playing (if its in the library)
-videoTypesInLibrary = {"movies": True, "episodes": True, "musicvideos": True} # init as true. will become false if they are not found
+videoTypesInLibrary = {"movies": True, "episodes": True, "musicvideos": True}  # init as true. will become false if they are not found
 
 # Create the addon_settings dir if not exists
 if not os.path.exists(__profile__):
     os.makedirs(__profile__)
 
 # Two files to persistently track the last played file and the resume point
-lastPlayedTrackerFilePath = os.path.join(__profile__,"lastplayed.txt")
-resumePointTrackerFilePath = os.path.join(__profile__,"resumepoint.txt")
+lastPlayedTrackerFilePath = os.path.join(__profile__, "lastplayed.txt")
+resumePointTrackerFilePath = os.path.join(__profile__, "resumepoint.txt")
 
 
 # Tag our logs with the addon name to make them easy to find..
@@ -95,6 +94,7 @@ def updateResumePoint(seconds):
     
     global currentPlayingFilePath
     global libraryId
+    global xbmc_monitor
     
     seconds = int(seconds)
 
@@ -108,7 +108,7 @@ def updateResumePoint(seconds):
         # check if Kodi is actually shutting down (abortRequested happens slightly after onPlayBackStopped, hence the sleep/wait/check)
         for i in range(0, 30):
             
-            if xbmc.abortRequested:
+            if xbmc_monitor.abortRequested():
                 log("Since Kodi is shutting down, will save resume point")
                 # Kodi is shutting down while playing a video. We want to save the resume point.
                 return
@@ -171,7 +171,7 @@ def updateResumePoint(seconds):
 
 # Persistently tracks the currently playing file (in case of crash, for possible resuming)
 
-def updatecurrentPlayingFilePath(filepath):
+def updateCurrentPlayingFilePath(filepath):
 
     global currentPlayingFilePath
     global libraryId
@@ -230,6 +230,7 @@ def updatecurrentPlayingFilePath(filepath):
 def resumeIfWasPlaying():
 
     global resumeonstartup
+    global xbmc_monitor
 
     if resumeonstartup and os.path.exists(resumePointTrackerFilePath) and os.path.exists(lastPlayedTrackerFilePath):
         
@@ -254,7 +255,7 @@ def resumeIfWasPlaying():
         
         # wait up to 10 secs for the video to start playing before we try to seek
         for i in range(0, 1000):
-            if not xbmc.Player().isPlayingVideo() and not xbmc.abortRequested:
+            if not xbmc.Player().isPlayingVideo() and not xbmc_monitor.abortRequested():
                 xbmc.sleep(100)
             else:
                 xbmc.executebuiltin('Notification(Resuming Playback At ' + strTimestamp + ',3000)')
@@ -358,6 +359,7 @@ def loadSettings():
 def handlePlayback():
 
     global saveintervalsecs
+    global xbmc_monitor
 
     log("Playback started")
 
@@ -367,22 +369,23 @@ def handlePlayback():
 
     xbmc.sleep(1500)  # give it a bit to start playing and let the stopped method finish
     
-    updatecurrentPlayingFilePath(xbmc.Player().getPlayingFile())    
+    updateCurrentPlayingFilePath(xbmc.Player().getPlayingFile())
     
-    while xbmc.Player().isPlaying() and not xbmc.abortRequested:
-        
+    while xbmc.Player().isPlaying() and not xbmc_monitor.abortRequested():
+
+
         updateResumePoint(xbmc.Player().getTime())
         
         for i in range(0, saveintervalsecs):
             # Shutting down or not playing video anymore...stop handling playback
-            if xbmc.abortRequested or not xbmc.Player().isPlaying():
+            if xbmc_monitor.abortRequested() or not xbmc.Player().isPlaying():
                 return
             # Otherwise sleep 1 second & loop           
             xbmc.sleep(1000)
 
 
 # Kodi Player Event Handling
-class MyPlayer( xbmc.Player ):
+class MyPlayer(xbmc.Player):
     
     def __init__(self, *args):
         xbmc.Player.__init__(self)
@@ -440,6 +443,7 @@ resumedPlayback = resumeIfWasPlaying()
 if not resumedPlayback and not xbmc.Player().isPlayingVideo():
     autoplayrandomIfEnabled()
 
-while not xbmc.abortRequested:
-    xbmc.sleep(100)
-
+while not xbmc_monitor.abortRequested():
+    if xbmc_monitor.waitForAbort(1):
+        # Abort was requested while waiting. We should exit
+        break
