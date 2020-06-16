@@ -1,0 +1,9 @@
+*.pyc
+*.pyo
+.DS*
+.pylint_rc
+/.idea
+/.project
+/.pydevproject
+/.settings
+resources/lib/test-outputs
