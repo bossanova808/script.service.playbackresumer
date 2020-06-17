@@ -1,3 +1,4 @@
+2.0.1 - Update settings to Matrix format
 2.0.0 - Port to Python 3 and prepare for submission to Matrix repo
 1.2.0 - Updated for Kodi Leia.  Dev taken over by bossanova808@gmail.com.
 1.1.0 - added ability to Auto-Play a random video if nothing is playing
