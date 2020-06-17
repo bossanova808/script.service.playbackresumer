@@ -1,20 +1,141 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<settings>
-<category label="32000">    
-	<setting id="saveintervalsecs" type="slider" label="32001" default="20" range="5,600" />
-	<setting id="resumeonstartup" type="bool" label="32002" default="false" />
-	<setting id="autoplayrandom" type="bool" label="32003" default="false" />
-</category>  
-
-
-  <category label="32030">
-    <setting id="ExcludeLiveTV" type="bool" label="32031" default="false"/>
-    <setting id="ExcludeHTTP" type="bool" label="32032" default="false"/>    
-    <setting id="ExcludePathOption" type="bool" label="32033" default="false" />
-    <setting id="ExcludePath" type="folder" source="video" label="32034" default="" visible= "eq(-1,true)" enable="eq(-1,true)" />
-    <setting id="ExcludePathOption2" type="bool" label="32033" default="false" visible= "eq(-2,true)" enable="eq(-2,true)" />
-    <setting id="ExcludePath2" type="folder" source="video" label="32034" default="" visible= "eq(-1,true)" enable="eq(-1,true)" />
-    <setting id="ExcludePathOption3" type="bool" label="32033" default="false" visible= "eq(-2,true)" enable="eq(-2,true)" />
-    <setting id="ExcludePath3" type="folder" source="video" label="32034" default="" visible= "eq(-1,true)" enable="eq(-1,true)" />
-  </category>
+<?xml version="1.0" ?>
+<settings version="1">
+	<section id="script.service.playbackresumer">
+		<category help="" id="resumer" label="32000">
+			<group id="1">
+				<setting help="" id="saveintervalsecs" label="32001" type="integer">
+					<level>0</level>
+					<default>20</default>
+					<constraints>
+						<minimum>5</minimum>
+						<maximum>600</maximum>
+					</constraints>
+					<control format="integer" type="slider">
+						<popup>false</popup>
+					</control>
+				</setting>
+				<setting help="" id="resumeonstartup" label="32002" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting help="" id="autoplayrandom" label="32003" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+			</group>
+		</category>
+		<category help="" id="exclude" label="32030">
+			<group id="1">
+				<setting help="" id="ExcludeLiveTV" label="32031" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting help="" id="ExcludeHTTP" label="32032" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting help="" id="ExcludePathOption" label="32033" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting help="" id="ExcludePath" label="32034" type="path">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<sources>
+							<source>video</source>
+						</sources>
+						<writable>false</writable>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="ExcludePathOption">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="ExcludePathOption">true</condition>
+						</dependency>
+					</dependencies>
+					<control format="path" type="button">
+						<heading>32034</heading>
+					</control>
+				</setting>
+				<setting help="" id="ExcludePathOption2" label="32033" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="ExcludePathOption">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="ExcludePathOption">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+				<setting help="" id="ExcludePath2" label="32034" type="path">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<sources>
+							<source>video</source>
+						</sources>
+						<writable>false</writable>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="ExcludePathOption2">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="ExcludePathOption2">true</condition>
+						</dependency>
+					</dependencies>
+					<control format="path" type="button">
+						<heading>32034</heading>
+					</control>
+				</setting>
+				<setting help="" id="ExcludePathOption3" label="32033" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="ExcludePathOption2">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="ExcludePathOption2">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
+				</setting>
+				<setting help="" id="ExcludePath3" label="32034" type="path">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<sources>
+							<source>video</source>
+						</sources>
+						<writable>false</writable>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<condition operator="is" setting="ExcludePathOption3">true</condition>
+						</dependency>
+						<dependency type="visible">
+							<condition operator="is" setting="ExcludePathOption3">true</condition>
+						</dependency>
+					</dependencies>
+					<control format="path" type="button">
+						<heading>32034</heading>
+					</control>
+				</setting>
+			</group>
+		</category>
+	</section>
 </settings>
