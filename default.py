@@ -16,9 +16,7 @@ __icon__ = __addon__.getAddonInfo('icon')
 __ID__ = __addon__.getAddonInfo('id')
 __kodiversion__ = float(xbmcaddon.Addon('xbmc.addon').getAddonInfo('version')[0:4])
 __profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))  # addon_data folder
-__resource__ = xbmc.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
 
-sys.path.append(__resource__)
 
 saveintervalsecs = 20  # default. Configured in settings.
 resumeonstartup = False  # default. Configured in sttings
@@ -95,6 +93,7 @@ def updateResumePoint(seconds):
     global currentPlayingFilePath
     global libraryId
     global xbmc_monitor
+    global player_monitor
     
     seconds = int(seconds)
 
@@ -113,7 +112,7 @@ def updateResumePoint(seconds):
                 # Kodi is shutting down while playing a video. We want to save the resume point.
                 return
             
-            if xbmc.Player().isPlaying():
+            if player_monitor.isPlaying():
                 # a new video has started playing. Kodi is not shutting down
                 break
             
@@ -121,9 +120,8 @@ def updateResumePoint(seconds):
 
     # Update the resume point in the tracker file
     log("Setting custom resume seconds to %d" % seconds)
-    f = open(resumePointTrackerFilePath, 'w+')
-    f.write(str(seconds))
-    f.close()
+    with open(resumePointTrackerFilePath, 'w') as f:
+        f.write(str(seconds))
     
     # Update the native Kodi resume point via JSON-RPC API
     if libraryId < 0:
@@ -185,9 +183,9 @@ def updateCurrentPlayingFilePath(filepath):
     currentPlayingFilePath = filepath
     
     # write the full path to a file for persistent tracking
-    f = open(lastPlayedTrackerFilePath, 'w+')
-    f.write(filepath)
-    f.close()
+    with open(lastPlayedTrackerFilePath, 'w+') as f:
+        f.write(filepath)
+
     log('Last played file set to: "%s"' % filepath)
     
     # check if its a library video and get the libraryId and typeOfVideo
@@ -231,35 +229,34 @@ def resumeIfWasPlaying():
 
     global resumeonstartup
     global xbmc_monitor
+    global player_monitor
 
     if resumeonstartup and os.path.exists(resumePointTrackerFilePath) and os.path.exists(lastPlayedTrackerFilePath):
-        
-        f = open(resumePointTrackerFilePath, 'r')
-        resumePoint = float(f.read())
-        f.close()
-        
+
+        with open(resumePointTrackerFilePath, 'r') as f:
+            resumePoint = float(f.read())
+
         # neg 1 means the video wasn't playing when Kodi ended
         if resumePoint < 0:
             log("Not resuming playback because nothing was playing when Kodi ended")
             return False
 
-        f = open(lastPlayedTrackerFilePath, 'r')
-        fullPath = f.read()
-        f.close()
+        with open(lastPlayedTrackerFilePath, 'r') as f:
+            fullPath = f.read()
 
         strTimestamp = str(int(resumePoint / 60))+":"+("%02d" % (resumePoint % 60))
         
         log("Will resume playback at "+ strTimestamp+" of " + fullPath)
         
-        xbmc.Player().play(fullPath)
+        player_monitor.play(fullPath)
         
         # wait up to 10 secs for the video to start playing before we try to seek
         for i in range(0, 1000):
-            if not xbmc.Player().isPlayingVideo() and not xbmc_monitor.abortRequested():
+            if not player_monitor.isPlayingVideo() and not xbmc_monitor.abortRequested():
                 xbmc.sleep(100)
             else:
-                xbmc.executebuiltin('Notification(Resuming Playback At ' + strTimestamp + ',3000)')
-                xbmc.Player().seekTime(resumePoint)             
+                xbmc.executebuiltin('Notification(Kodi Playback Resumer,Resuming Playback At ' + strTimestamp + ',3000)')
+                player_monitor.seekTime(resumePoint)
                 return True 
 
     return False
@@ -325,6 +322,8 @@ def getRandomLibraryVideo():
 # Play a random video if the setting is enabled
 def autoplayrandomIfEnabled():
 
+    global player_monitor
+
     if autoplayrandom:
 
         log("autoplayrandom is enabled, so will play a new random video now")       
@@ -332,11 +331,11 @@ def autoplayrandomIfEnabled():
         videoPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
 
         # make sure the current playlist has finished completely
-        if not xbmc.Player().isPlayingVideo() and (videoPlaylist.getposition() == -1 or videoPlaylist.getposition() == videoPlaylist.size()):
+        if not player_monitor.isPlayingVideo() and (videoPlaylist.getposition() == -1 or videoPlaylist.getposition() == videoPlaylist.size()):
             fullpath = getRandomLibraryVideo()
             log("Auto-playing next random video because nothing is playing and playlist is empty: " + fullpath)         
-            xbmc.Player().play(fullpath)
-            xbmc.executebuiltin('Notification(Auto-playing random video,' + fullpath + ',3000)')
+            player_monitor.play(fullpath)
+            xbmc.executebuiltin('Notification(Kodi Playback Resumer, Auto-playing random video,' + fullpath + ',3000)')
         else:
             log("Not autoplaying a new random video because we are not at the end of the playlist or something is already playing: currentPosition="+str(videoPlaylist.getposition())+", size=" + str(videoPlaylist.size()))
 
@@ -360,25 +359,26 @@ def handlePlayback():
 
     global saveintervalsecs
     global xbmc_monitor
+    global player_monitor
 
     log("Playback started")
 
-    if not xbmc.Player().isPlayingVideo():
-        log("Not playing a video - skipping: " + xbmc.Player().getPlayingFile())
+    if not player_monitor.isPlayingVideo():
+        log("Not playing a video - skipping: " + player_monitor.getPlayingFile())
         return
 
     xbmc.sleep(1500)  # give it a bit to start playing and let the stopped method finish
     
-    updateCurrentPlayingFilePath(xbmc.Player().getPlayingFile())
+    updateCurrentPlayingFilePath(player_monitor.getPlayingFile())
     
-    while xbmc.Player().isPlaying() and not xbmc_monitor.abortRequested():
+    while player_monitor.isPlaying() and not xbmc_monitor.abortRequested():
 
 
-        updateResumePoint(xbmc.Player().getTime())
+        updateResumePoint(player_monitor.getTime())
         
         for i in range(0, saveintervalsecs):
             # Shutting down or not playing video anymore...stop handling playback
-            if xbmc_monitor.abortRequested() or not xbmc.Player().isPlaying():
+            if xbmc_monitor.abortRequested() or not player_monitor.isPlaying():
                 return
             # Otherwise sleep 1 second & loop           
             xbmc.sleep(1000)
@@ -408,11 +408,11 @@ class MyPlayer(xbmc.Player):
 
     def onPlayBackSeek(self, time, seekOffset):
         log("Playback seeked (time)")
-        updateResumePoint(xbmc.Player().getTime())
+        updateResumePoint(self.getTime())
 
     def onPlayBackSeekChapter(self, chapter):
         log("Playback seeked (chapter)")
-        updateResumePoint(xbmc.Player().getTime())
+        updateResumePoint(self.getTime())
 
     def onAVStarted(self):
         handlePlayback()
@@ -440,7 +440,7 @@ loadSettings()
 player_monitor = MyPlayer()
 
 resumedPlayback = resumeIfWasPlaying()
-if not resumedPlayback and not xbmc.Player().isPlayingVideo():
+if not resumedPlayback and not player_monitor.isPlayingVideo():
     autoplayrandomIfEnabled()
 
 while not xbmc_monitor.abortRequested():
