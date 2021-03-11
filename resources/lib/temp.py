@@ -8,46 +8,46 @@ import json
 from time import time
 from random import randint
 
-__addon__ = xbmcaddon.Addon()
-__cwd__ = __addon__.getAddonInfo('path')
-__scriptname__ = __addon__.getAddonInfo('name')
-__version__ = __addon__.getAddonInfo('version')
-__icon__ = __addon__.getAddonInfo('icon')
-__ID__ = __addon__.getAddonInfo('id')
-__kodiversion__ = float(xbmcaddon.Addon('xbmc.addon').getAddonInfo('version')[0:4])
-__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))  # addon_data folder
-
-saveintervalsecs = 20  # default. Configured in settings.
-resumeonstartup = False  # default. Configured in sttings
-autoplayrandom = False  # default. Configured in settings
-currentPlayingFilePath = ''  # The str full path of the video file currently playing
-typeOfVideo = 'unknown'  # The type of video currently playing (episode, movie, musicvideo, etc.)
-libraryId = -1  # The id of the video currently playing (if its in the library)
-videoTypesInLibrary = {"movies": True, "episodes": True,
-                       "musicvideos": True}  # init as true. will become false if they are not found
-
-# Create the addon_settings dir if not exists
-if not os.path.exists(__profile__):
-    os.makedirs(__profile__)
-
-# Two files to persistently track the last played file and the resume point
-lastPlayedTrackerFilePath = os.path.join(__profile__, "lastplayed.txt")
-resumePointTrackerFilePath = os.path.join(__profile__, "resumepoint.txt")
-
-
-# Tag our logs with the addon name to make them easy to find..
-def log(msg):
-    xbmc.log("### [%s] - %s" % (__scriptname__, msg,), level=xbmc.LOGDEBUG)
-
-
-# Helper function to get string type from settings
-def getSetting(setting):
-    return __addon__.getSetting(setting).strip()
-
-
-# Helper function to get bool type from settings
-def getSettingAsBool(setting):
-    return getSetting(setting).lower() == "true"
+# __addon__ = xbmcaddon.Addon()
+# __cwd__ = __addon__.getAddonInfo('path')
+# __scriptname__ = __addon__.getAddonInfo('name')
+# __version__ = __addon__.getAddonInfo('version')
+# __icon__ = __addon__.getAddonInfo('icon')
+# __ID__ = __addon__.getAddonInfo('id')
+# __kodiversion__ = float(xbmcaddon.Addon('xbmc.addon').getAddonInfo('version')[0:4])
+# __profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile'))  # addon_data folder
+#
+# saveintervalsecs = 20  # default. Configured in settings.
+# resumeonstartup = False  # default. Configured in sttings
+# autoplayrandom = False  # default. Configured in settings
+# currentPlayingFilePath = ''  # The str full path of the video file currently playing
+# typeOfVideo = 'unknown'  # The type of video currently playing (episode, movie, musicvideo, etc.)
+# libraryId = -1  # The id of the video currently playing (if its in the library)
+# videoTypesInLibrary = {"movies": True, "episodes": True,
+#                        "musicvideos": True}  # init as true. will become false if they are not found
+#
+# # Create the addon_settings dir if not exists
+# if not os.path.exists(__profile__):
+#     os.makedirs(__profile__)
+#
+# # Two files to persistently track the last played file and the resume point
+# lastPlayedTrackerFilePath = os.path.join(__profile__, "lastplayed.txt")
+# resumePointTrackerFilePath = os.path.join(__profile__, "resumepoint.txt")
+#
+#
+# # Tag our logs with the addon name to make them easy to find..
+# def log(msg):
+#     xbmc.log("### [%s] - %s" % (__scriptname__, msg,), level=xbmc.LOGDEBUG)
+#
+#
+# # Helper function to get string type from settings
+# def getSetting(setting):
+#     return __addon__.getSetting(setting).strip()
+#
+#
+# # Helper function to get bool type from settings
+# def getSettingAsBool(setting):
+#     return getSetting(setting).lower() == "true"
 
 
 # Check exclusion settings for filename passed as argument
