@@ -1,82 +1,162 @@
+from random import randint
+
 from .common import *
-
-
+from .store import Store
+import json
+import time
+import os
 import xbmc
 
 
 class KodiPlayer(xbmc.Player):
+    """
+    This class represents/monitors the Kodi video player
+    """
 
-    # Main function - updates the resume point in the Kodi library periodically
-    def updateResumePoint(seconds):
+    def __init__(self, *args):
+        xbmc.Player.__init__(self)
+        log('KodiPlayer __init__')
 
-        global currentPlayingFilePath
-        global libraryId
-        global xbmc_monitor
-        global player_monitor
+    def onPlayBackPaused(self):
+        log('onPlayBackPaused')
+        Store.paused_time = time.time()
+        log(f'Playback paused at: {Store.paused_time}')
 
+    def onPlayBackEnded(self):  # video ended normally (user didn't stop it)
+        log("onPlayBackEnded")
+        self.update_resume_point(-1)
+        self.autoplay_random_if_enabled()
+
+    def onPlayBackStopped(self):
+        log("onPlayBackStopped")
+        self.update_resume_point(-2)
+
+    def onPlayBackSeek(self, time, seekOffset):
+        log(f'onPlayBackSeek time {time}, seekOffset {seekOffset}')
+        try:
+            self.update_resume_point(self.getTime())
+        except RuntimeError:
+            log("Could not get playing time - seeked past end?")
+            self.update_resume_point(0)
+            pass
+
+    def onPlayBackSeekChapter(self, chapter):
+        log(f'onPlayBackSeekChapter chapter: {chapter}')
+        try:
+            self.update_resume_point(self.getTime())
+        except RuntimeError:
+            log("Could not get playing time - seeked past end?")
+            self.update_resume_point(0)
+            pass
+
+    def onAVStarted(self):
+        log("onAVStarted")
+
+        if not self.isPlayingVideo():
+            log("Not playing a video - skipping: " + self.getPlayingFile())
+            return
+
+        xbmc.sleep(1500)  # give it a bit to start playing and let the stopped method finish
+
+        Store.update_current_playing_file_path(self.getPlayingFile())
+
+        while self.isPlaying() and not Store.kodi_event_monitor.abortRequested():
+
+            try:
+                self.update_resume_point(self.getTime())
+            except RuntimeError:
+                log('Could not get current playback time from player')
+
+            for i in range(0, Store.save_interval_seconds):
+                # Shutting down or not playing video anymore...stop handling playback
+                if Store.kodi_event_monitor.abortRequested() or not self.isPlaying():
+                    return
+                # Otherwise sleep 1 second & loop
+                xbmc.sleep(1000)
+
+    def update_resume_point(self, seconds):
+        """
+        This is where the work is done - stores a new resume point in the Kodi library for the currently playing file
+
+        :param: seconds: the time to update the resume point to.  @todo add notes on -1, -2 etc here!
+        :param: Store.library_id: the Kodi library id of the currently playing file
+        :return: None
+        """
+
+        # cast to int just to be sure
         seconds = int(seconds)
 
-        if currentPlayingFilePath == '':
-            log("No valid currentPlayingFilePath found -- not setting resume point")
+        # short circuit if we haven't got a record of the file that is currently playing
+        if not Store.currently_playing_file_path:
+            log("No valid currently_playing_file_path found - therefore not setting resume point")
             return
 
         # -1 indicates that the video has stopped playing
         if seconds < 0:
 
-            # check if Kodi is actually shutting down (abortRequested happens slightly after onPlayBackStopped, hence the sleep/wait/check)
+            # check if Kodi is actually shutting down
+            # (abortRequested happens slightly after onPlayBackStopped, hence the sleep/wait/check)
             for i in range(0, 30):
 
-                if xbmc_monitor.abortRequested():
-                    log("Since Kodi is shutting down, will save resume point")
+                if Store.kodi_event_monitor.abortRequested():
+                    log("Kodi is shutting down, and will save resume point")
                     # Kodi is shutting down while playing a video. We want to save the resume point.
                     return
 
-                if player_monitor.isPlaying():
+                if self.isPlaying():
                     # a new video has started playing. Kodi is not shutting down
                     break
 
                 xbmc.sleep(100)
 
-        # Update the resume point in the tracker file
-        log("Setting custom resume seconds to %d" % seconds)
-        with open(resumePointTrackerFilePath, 'w') as f:
+        # Short circuit if playing and current time < Kodi's ignoresecondsatstart settings,
+        if 0 < seconds < Store.ignore_seconds_at_start:
+            log(f'Not updating resume point as current time ({seconds}) is below Kodi\'s ignoresecondsatstart'
+                f' setting {Store.ignore_seconds_at_start}')
+            return
+
+        # First update the resume point in the tracker file for later retrieval
+        log(f'Setting custom resume seconds to {seconds}')
+        with open(Store.file_to_store_resume_point, 'w') as f:
             f.write(str(seconds))
 
-        # Update the native Kodi resume point via JSON-RPC API
-        if libraryId < 0:
-            log(
-                "Will not update Kodi native resume point because this file is not in the library: " + currentPlayingFilePath)
+        # Now, update the Kodi library resume point for this video via JSON-RPC API
+        if Store.library_id < 0:
+            log(f'Can\'t update Kodi native resume point because {Store.currently_playing_file_path} is not in the library')
             return
         if seconds == -2:
-            log("Will not update Kodi native resume point because the file was stopped normally")
+            log("Not updating Kodi native resume point because the file was stopped normally, Kodi will do it")
             return
         if seconds < 0:
-            # zero indicates to JSON-RPC to remove the bookmark
+            # zero indicates to JSON-RPC to remove the resume point
             seconds = 0
-            log("Setting Kodi native resume point to " + (
-                "be removed" if seconds == 0 else str(seconds) + " seconds") + " for " + typeOfVideo + " id " + str(
-                libraryId))
+
+        # Log what we are doing
+        if seconds == 0:
+            log(f'Removing resume point for {Store.type_of_video} id {Store.library_id}')
+        else:
+            log(f'Setting resume point for {Store.type_of_video} id {Store.library_id} to {seconds} seconds')
 
         # Determine the JSON-RPC setFooDetails method to use and what the library id name is based of the type of video
-        method = ''
-        idname = ''
-        if typeOfVideo == 'episode':
+        if Store.type_of_video == 'episode':
             method = 'SetEpisodeDetails'
-            idname = 'episodeid'
-        elif typeOfVideo == 'movie':
+            id_name = 'episodeid'
+        elif Store.type_of_video == 'movie':
             method = 'SetMovieDetails'
-            idname = 'movieid'
-        else:  # music video
+            id_name = 'movieid'
+        elif Store.type_of_video == 'musicvideo':
             method = 'SetMusicVideoDetails'
-            idname = 'musicvideoid'
+            id_name = 'musicvideoid'
+        else:
+            log(f'Can\'t update resume point as did not recognise type of video [{Store.type_of_video}]')
+            return
 
-        # https://github.com/xbmc/xbmc/commit/408ceb032934b3148586500cc3ffd34169118fea
         query = {
             "jsonrpc": "2.0",
             "id": "setResumePoint",
             "method": "VideoLibrary." + method,
             "params": {
-                idname: libraryId,
+                id_name: Store.library_id,
                 "resume": {
                     "position": seconds,
                     # "total": 0 # Not needed: https://forum.kodi.tv/showthread.php?tid=161912&pid=1596436#pid1596436
@@ -84,35 +164,131 @@ class KodiPlayer(xbmc.Player):
             }
         }
 
-        log("Executing JSON-RPC: " + json.dumps(query))
-        jsonResponse = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
-        log("VideoLibrary." + method + " response: " + json.dumps(jsonResponse))
-    def __init__(self, *args):
-        xbmc.Player.__init__(self)
-        log('MyPlayer - init')
+        log(f'Executing JSON-RPC: {json.dumps(query)}')
+        json_response = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
+        log(f'JSON-RPC VideoLibrary.{method} response: {json.dumps(json_response)}')
 
-    def onPlayBackPaused(self):
-        global g_pausedTime
-        g_pausedTime = time()
-        log('Paused. Time: %d' % g_pausedTime)
+    def resume_if_was_playing(self):
+        """
+        Automatically resume a video after a crash, if one was playing...
 
-    def onPlayBackEnded(self):  # video ended normally (user didn't stop it)
-        log("Playback ended")
-        updateResumePoint(-1)
-        autoplayrandomIfEnabled()
+        :return:
+        """
 
-    def onPlayBackStopped(self):
-        log("Playback stopped")
-        updateResumePoint(-2)
-        # autoplayrandomIfEnabled() # if user stopped video, they probably don't want a new random one to start
+        if Store.resume_on_startup \
+                and os.path.exists(Store.file_to_store_resume_point) \
+                and os.path.exists(Store.file_to_store_last_played):
 
-    def onPlayBackSeek(self, time, seekOffset):
-        log("Playback seeked (time)")
-        updateResumePoint(self.getTime())
+            with open(Store.file_to_store_resume_point, 'r') as f:
+                resume_point = float(f.read())
 
-    def onPlayBackSeekChapter(self, chapter):
-        log("Playback seeked (chapter)")
-        updateResumePoint(self.getTime())
+            # neg 1 means the video wasn't playing when Kodi ended
+            if resume_point < 0:
+                log("Not resuming playback because nothing was playing when Kodi last closed")
+                return False
 
-    def onAVStarted(self):
-        handlePlayback()
+            with open(Store.file_to_store_last_played, 'r') as f:
+                full_path = f.read()
+
+            str_timestamp = '%d:%02d' % (resume_point / 60, resume_point % 60)
+            log(f'Will resume playback at {str_timestamp} of {full_path}')
+
+            self.play(full_path)
+
+            # wait up to 10 secs for the video to start playing before we try to seek
+            for i in range(0, 1000):
+                if not self.isPlayingVideo() and not Store.kodi_event_monitor.abortRequested():
+                    xbmc.sleep(100)
+                else:
+                    notify(f'Resuming playback at {str_timestamp}', xbmcgui.NOTIFICATION_INFO)
+                    self.seekTime(resume_point)
+                    return True
+
+        return False
+
+    def get_random_library_video(self):
+        """
+        Get a random video from the library for playback
+
+        :return:
+        """
+
+        # Short circuit if library is empty
+        if not Store.video_types_in_library['episodes'] \
+                and not Store.video_types_in_library['movies'] \
+                and not Store.video_types_in_library['musicvideos']:
+            log('No episodes, movies, or music videos exist in the Kodi library. Cannot autoplay a random video.')
+            return
+
+        random_int = randint(0, 2)
+        if random_int == 0:
+            result_type = 'episodes'
+            method = "GetEpisodes"
+        elif random_int == 1:
+            result_type = 'movies'
+            method = "GetMovies"
+        elif random_int == 2:
+            result_type = 'musicvideos'
+            method = "GetMusicVideos"
+
+        # if the randomly chosen type is not in the library, keep randomly trying until we get
+        # a type that is in the library...
+        if not Store.video_types_in_library[result_type]:
+            return self.get_random_library_video()  # get a different one
+
+        log(f'Getting a random video from: {result_type}')
+
+        query = {
+            "jsonrpc": "2.0",
+            "id": "randomLibraryVideo",
+            "method": "VideoLibrary." + method,
+            "params": {
+                "limits": {
+                    "end": 1
+                },
+                "sort": {
+                    "method": "random"
+                },
+                "properties": [
+                    "file"
+                ]
+            }
+        }
+
+        log(f'Executing JSON-RPC: {json.dumps(query)}')
+        json_response = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
+        log(f'JSON-RPC VideoLibrary.{method} response: {json.dumps(json_response)}')
+
+        # found a video!
+        if json_response['result']['limits']['total'] > 0:
+            Store.video_types_in_library[result_type] = True
+            return json_response['result'][result_type][0]['file']
+        # no videos of this type
+        else:
+            log("There are no " + result_type + " in the library")
+            Store.video_types_in_library[result_type] = False
+            return self.get_random_library_video()
+
+    def autoplay_random_if_enabled(self):
+        """
+        Play a random video, if the setting is enabled
+        :return:
+        """
+
+        if Store.autoplay_random:
+
+            log("Autoplay random is enabled in addon settings, so will play a new random video now.")
+
+            video_playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+
+            # make sure the current playlist has finished completely
+            if not self.isPlayingVideo() \
+                    and (video_playlist.getposition() == -1 or video_playlist.getposition() == video_playlist.size()):
+                full_path = self.get_random_library_video()
+                log("Auto-playing next random video because nothing is playing and playlist is empty: " + full_path)
+                self.play(full_path)
+                notify(f'Auto-playing random video: {full_path}', xbmcgui.NOTIFICATION_INFO)
+            else:
+                log(f'Not auto-playing random as playlist not empty or something is playing.')
+                log(f'Current playlist position: {video_playlist.getposition()}, playlist size: {video_playlist.size()}')
+

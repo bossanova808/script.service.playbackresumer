@@ -1,6 +1,6 @@
 import xbmc
 from .common import *
-from .config import Config
+from .store import Store
 
 
 class KodiEventMonitor(xbmc.Monitor):
@@ -10,7 +10,9 @@ class KodiEventMonitor(xbmc.Monitor):
         log('KodiEventMonitor __init__')
 
     def onSettingsChanged(self):
-        Config.load_config_from_settings()
+        log('onSettingsChanged - reload them.')
+        Store.load_config_from_settings()
 
     def onAbortRequested(self):
+        log('onAbortRequested')
         log("Abort Requested")
