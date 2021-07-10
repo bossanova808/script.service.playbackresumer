@@ -1,6 +1,8 @@
 from .common import *
 import os
 import json
+import xml.etree.ElementTree as ElementTree
+
 import xbmc
 
 
@@ -12,7 +14,8 @@ class Store:
     # Static class variables, referred to by Store.whatever
     # https://docs.python.org/3/faq/programming.html#how-do-i-create-static-class-data-and-static-class-methods
     save_interval_seconds = 30
-    ignore_seconds_at_start = 0
+    ignore_seconds_at_start = 180
+    ignore_percent_at_end = 8
     resume_on_startup = False
     autoplay_random = False
     kodi_event_monitor = None
@@ -26,6 +29,9 @@ class Store:
     library_id = -1
     # if the video was paused, at what time was it paused?
     paused_time = None
+    # how long is the currently playing video (so we can ignorepercentatend)
+    length_of_currently_playing_file = 0
+
     # Is this type of video in the library?  These start as true and are set to false if later not found.
     video_types_in_library = {'episodes': True, 'movies': True, 'musicvideos': True}
 
@@ -47,19 +53,27 @@ class Store:
         Store.file_to_store_last_played = os.path.join(PROFILE, "lastplayed.txt")
         Store.file_to_store_resume_point = os.path.join(PROFILE, "resumepoint.txt")
 
-        # Is there a more direct way to get this??
-        query = {
-            'jsonrpc': '2.0',
-            'method': 'Settings.GetSettingValue',
-            'params': {'setting': 'video.ignoresecondsatstart'},
-            'id': '1'
-        }
-        log(f'JSON-RPC executing {query}')
-        json_data = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
-        log(f'JSON-RPC Settings.GetSettingValue returned: {json.dumps(json_data)}')
-        #Store.ignore_seconds_at_start = json_data['result']['value']
-        Store.ignore_seconds_at_start = 10
+        # Have to read this in ourselves as there appears to be no plugin function to access it...
+        advancedsettings_file = xbmcvfs.translatePath("special://profile/advancedsettings.xml")
 
+        root = None
+        try:
+            root = ElementTree.parse(advancedsettings_file).getroot()
+            log("Found and parsed advancedsettings.xml")
+        except (ElementTree.ParseError, IOError):
+            log("Could not find/parse advancedsettings.xml, will use defaults")
+
+        if root is not None:
+            element = root.find('./video/ignoresecondsatstart')
+            if element is not None:
+                log("Found advanced setting ignoresecondsatstart")
+                Store.ignore_seconds_at_start = int(element.text)
+            element = root.find('./video/ignorepercentatend')
+            if element is not None:
+                log("Found advanced setting ignorepercentatend")
+                Store.ignore_percent_at_end = int(element.text)
+
+        log(f"Using ignoresecondsatstart: {Store.ignore_seconds_at_start}, ignorepercentatend: {Store.ignore_percent_at_end}")
 
     @staticmethod
     def load_config_from_settings():

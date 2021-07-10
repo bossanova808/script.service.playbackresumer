@@ -59,6 +59,7 @@ class KodiPlayer(xbmc.Player):
         xbmc.sleep(1500)  # give it a bit to start playing and let the stopped method finish
 
         Store.update_current_playing_file_path(self.getPlayingFile())
+        Store.length_of_currently_playing_file = self.getTotalTime()
 
         while self.isPlaying() and not Store.kodi_event_monitor.abortRequested():
 
@@ -109,11 +110,20 @@ class KodiPlayer(xbmc.Player):
 
                 xbmc.sleep(100)
 
-        # Short circuit if playing and current time < Kodi's ignoresecondsatstart settings,
+        # Short circuit if current time < Kodi's ignoresecondsatstart setting
         if 0 < seconds < Store.ignore_seconds_at_start:
             log(f'Not updating resume point as current time ({seconds}) is below Kodi\'s ignoresecondsatstart'
-                f' setting {Store.ignore_seconds_at_start}')
+                f' setting of {Store.ignore_seconds_at_start}')
             return
+
+        # Short circuit if current time > Kodi's ignorepercentatend setting
+        percent_played = int((seconds * 100) / Store.length_of_currently_playing_file)
+        if percent_played > (100 - Store.ignore_percent_at_end):
+            log(f'Not updating resume point as current percent played ({percent_played}) is above Kodi\'s ignorepercentatend'
+                f' setting of {Store.ignore_percent_at_end}')
+            return
+
+        # OK, BELOW HERE, we're actually setting a resume point...
 
         # First update the resume point in the tracker file for later retrieval
         log(f'Setting custom resume seconds to {seconds}')
@@ -125,7 +135,7 @@ class KodiPlayer(xbmc.Player):
             log(f'Can\'t update Kodi native resume point because {Store.currently_playing_file_path} is not in the library')
             return
         if seconds == -2:
-            log("Not updating Kodi native resume point because the file was stopped normally, Kodi will do it")
+            log("Not updating Kodi native resume point because the file was stopped normally, so Kodi will do it anyway")
             return
         if seconds < 0:
             # zero indicates to JSON-RPC to remove the resume point
