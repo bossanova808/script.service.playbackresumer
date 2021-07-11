@@ -10,5 +10,5 @@ Optionally, automatically resume playback automatically when Kodi is restarted a
 
 Support is via the Kodi forum thread: <https://forum.kodi.tv/showthread.php?tid=355383>
 
-(Original code by bradvido88 recovered from the Kodi forum, and from May 2019 updated & maintained in this repo by bossanova808).
+(Re-written from the ground up in 2021 by bossanova808, originally inspired by bradvido88 code recovered from the Kodi forum, and from May 2019 updated & maintained in this repo by bossanova808).
 
