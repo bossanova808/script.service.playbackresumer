@@ -190,7 +190,11 @@ class KodiPlayer(xbmc.Player):
                 and os.path.exists(Store.file_to_store_last_played):
 
             with open(Store.file_to_store_resume_point, 'r') as f:
-                resume_point = float(f.read())
+                try:
+                    resume_point = float(f.read())
+                except Exception as e:
+                    log("Error reading resume point from file, therefore not resuming.")
+                    return
 
             # neg 1 means the video wasn't playing when Kodi ended
             if resume_point < 0:
