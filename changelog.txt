@@ -1,5 +1,7 @@
 v2.0.2
-- Update for Matrix logging changes
+- Complete re-write into more modular, modern Python 3
+- Add support for advancedsettings ignoresecondsatstart and ignorepercentatend
+- Handle player seeking past end of file more gracefully
 
 v2.0.1 
 - Update settings to Matrix format
