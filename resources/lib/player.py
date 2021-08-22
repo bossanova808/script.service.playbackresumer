@@ -131,7 +131,7 @@ class KodiPlayer(xbmc.Player):
             f.write(str(seconds))
 
         # Now, update the Kodi library resume point for this video via JSON-RPC API
-        if Store.library_id < 0:
+        if not Store.library_id or Store.library_id < 0:
             log(f'Can\'t update Kodi native resume point because {Store.currently_playing_file_path} is not in the library')
             return
         if seconds == -2:
@@ -150,18 +150,21 @@ class KodiPlayer(xbmc.Player):
         # Determine the JSON-RPC setFooDetails method to use and what the library id name is based of the type of video
         if Store.type_of_video == 'episode':
             method = 'SetEpisodeDetails'
+            get_method = 'GetEpisodeDetails'
             id_name = 'episodeid'
         elif Store.type_of_video == 'movie':
             method = 'SetMovieDetails'
+            get_method = 'GetMovieDetails'
             id_name = 'movieid'
         elif Store.type_of_video == 'musicvideo':
             method = 'SetMusicVideoDetails'
+            get_method = 'GetMusicVideoDetails'
             id_name = 'musicvideoid'
         else:
             log(f'Can\'t update resume point as did not recognise type of video [{Store.type_of_video}]')
             return
 
-        query = {
+        query = json.dumps({
             "jsonrpc": "2.0",
             "id": "setResumePoint",
             "method": "VideoLibrary." + method,
@@ -172,11 +175,24 @@ class KodiPlayer(xbmc.Player):
                     # "total": 0 # Not needed: https://forum.kodi.tv/showthread.php?tid=161912&pid=1596436#pid1596436
                 }
             }
-        }
+        })
 
-        log(f'Executing JSON-RPC: {json.dumps(query)}')
-        json_response = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
-        log(f'JSON-RPC VideoLibrary.{method} response: {json.dumps(json_response)}')
+        log(f'Executing JSON-RPC: {query}')
+        send_kodi_json(f'Set resume point to {seconds}', query)
+
+        # For debugging - let's retrieve and log the current resume point...
+        query = json.dumps({
+            "jsonrpc": "2.0",
+            "id": "getResumePoint",
+            "method": "VideoLibrary." + get_method,
+            "params": {
+                id_name: Store.library_id,
+                "properties": ["resume"],
+            }
+        })
+
+        log(f'Executing JSON-RPC: {query}')
+        send_kodi_json(f'Get resume point for id {Store.library_id}', query)
 
     def resume_if_was_playing(self):
         """
