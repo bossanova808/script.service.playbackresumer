@@ -52,6 +52,9 @@ class KodiPlayer(xbmc.Player):
     def onAVStarted(self):
         log("onAVStarted")
 
+        # Clean up - get rid of any data about any files previously played
+        Store.clear_old_play_details()
+
         if not self.isPlayingVideo():
             log("Not playing a video - skipping: " + self.getPlayingFile())
             return
@@ -101,11 +104,11 @@ class KodiPlayer(xbmc.Player):
 
                 if Store.kodi_event_monitor.abortRequested():
                     log("Kodi is shutting down, and will save resume point")
-                    # Kodi is shutting down while playing a video. We want to save the resume point.
+                    # Kodi is shutting down while playing a video.
                     return
 
                 if self.isPlaying():
-                    # a new video has started playing. Kodi is not shutting down
+                    # a new video has started playing. Kodi is not actually shutting down
                     break
 
                 xbmc.sleep(100)
@@ -116,30 +119,37 @@ class KodiPlayer(xbmc.Player):
                 f' setting of {Store.ignore_seconds_at_start}')
             return
 
-        # Short circuit if current time > Kodi's ignorepercentatend setting
+        # Short circuits
+
+        # No library ID or weird library ID
+        if not Store.library_id:
+            log(f"No library id for {Store.currently_playing_file_path} so can't set a resume point")
+            return
+        if Store.library_id < 0:
+            log(f'Can\'t update Kodi native resume point because {Store.currently_playing_file_path} is not in the library')
+            return
+        # Kodi doing its normal stopping thing
+        if seconds == -2:
+            log("Not updating Kodi native resume point because the file was stopped normally, so Kodi will do it anyway")
+            return
+        # At this point if seconds is < 0, it is -1 meaning end of file/clear resume point
+        if seconds < 0:
+            # zero indicates to JSON-RPC to remove the resume point
+            seconds = 0
+
+        # if current time > Kodi's ignorepercentatend setting
         percent_played = int((seconds * 100) / Store.length_of_currently_playing_file)
         if percent_played > (100 - Store.ignore_percent_at_end):
             log(f'Not updating resume point as current percent played ({percent_played}) is above Kodi\'s ignorepercentatend'
                 f' setting of {Store.ignore_percent_at_end}')
             return
 
-        # OK, BELOW HERE, we're actually setting a resume point...
+        # OK, BELOW HERE, we're probably going to set a resume point
 
-        # First update the resume point in the tracker file for later retrieval
+        # First update the resume point in the tracker file for later retrieval if needed
         log(f'Setting custom resume seconds to {seconds}')
         with open(Store.file_to_store_resume_point, 'w') as f:
             f.write(str(seconds))
-
-        # Now, update the Kodi library resume point for this video via JSON-RPC API
-        if not Store.library_id or Store.library_id < 0:
-            log(f'Can\'t update Kodi native resume point because {Store.currently_playing_file_path} is not in the library')
-            return
-        if seconds == -2:
-            log("Not updating Kodi native resume point because the file was stopped normally, so Kodi will do it anyway")
-            return
-        if seconds < 0:
-            # zero indicates to JSON-RPC to remove the resume point
-            seconds = 0
 
         # Log what we are doing
         if seconds == 0:
