@@ -186,8 +186,6 @@ class KodiPlayer(xbmc.Player):
                 }
             }
         })
-
-        log(f'Executing JSON-RPC: {query}')
         send_kodi_json(f'Set resume point to {seconds}', query)
 
         # For debugging - let's retrieve and log the current resume point...
@@ -200,8 +198,6 @@ class KodiPlayer(xbmc.Player):
                 "properties": ["resume"],
             }
         })
-
-        log(f'Executing JSON-RPC: {query}')
         send_kodi_json(f'Get resume point for id {Store.library_id}', query)
 
     def resume_if_was_playing(self):
