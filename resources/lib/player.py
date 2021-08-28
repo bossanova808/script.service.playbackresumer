@@ -122,15 +122,12 @@ class KodiPlayer(xbmc.Player):
         # Short circuits
 
         # No library ID or weird library ID
-        if not Store.library_id:
-            log(f"No library id for {Store.currently_playing_file_path} so can't set a resume point")
-            return
-        if Store.library_id < 0:
-            log(f'Can\'t update Kodi native resume point because {Store.currently_playing_file_path} is not in the library')
+        if not Store.library_id or Store.library_id < 0:
+            log(f"No/invalid library id ({Store.library_id}) for {Store.currently_playing_file_path} so can't set a resume point")
             return
         # Kodi doing its normal stopping thing
         if seconds == -2:
-            log("Not updating Kodi native resume point because the file was stopped normally, so Kodi will do it anyway")
+            log("Not updating Kodi native resume point because the file was stopped normally, so Kodi should do it itself")
             return
         # At this point if seconds is < 0, it is -1 meaning end of file/clear resume point
         if seconds < 0:
