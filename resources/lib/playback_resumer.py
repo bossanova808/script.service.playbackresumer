@@ -11,9 +11,14 @@ from bossanova808.logger import Logger
 
 def run():
     """
-    This is 'main'
-
-    :return:
+    Start the addon: initialize logging and global state, configure Kodi monitor and player, attempt to resume or start playback, then run the main event loop until an abort is requested.
+    
+    This function:
+    - Starts the logger and creates the global Store.
+    - Instantiates and stores Kodi event monitor and player objects.
+    - Attempts to resume previous playback; if nothing resumed and no video is playing, triggers autoplay when enabled.
+    - Enters a loop that waits for an abort request and exits when one is detected.
+    - Stops the logger before returning.
     """
     Logger.start()
     # load settings and create the store for our globals

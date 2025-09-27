@@ -19,6 +19,12 @@ class KodiPlayer(xbmc.Player):
 
     # noinspection PyUnusedLocal
     def __init__(self, *args):
+        """
+        Initialize the KodiPlayer instance and bind it to xbmc.Player.
+        
+        Parameters:
+            *args: Optional positional arguments accepted for compatibility; any values passed are ignored.
+        """
         xbmc.Player.__init__(self)
         Logger.debug('KodiPlayer __init__')
 
@@ -33,10 +39,26 @@ class KodiPlayer(xbmc.Player):
         self.autoplay_random_if_enabled()
 
     def onPlayBackStopped(self):
+        """
+        Handle the playback-stopped event and mark the current resume point as managed by Kodi.
+        
+        When playback stops, record a sentinel resume value indicating that Kodi should retain or handle the resume point (internal sentinel -2).
+        """
         Logger.info("onPlayBackStopped")
         self.update_resume_point(-2)
 
     def onPlayBackSeek(self, time_to_seek, seek_offset):
+        """
+        Handle a user-initiated seek during playback and update the stored resume point.
+        
+        When a seek occurs, attempt to record the current playback time as the resume point.
+        If reading the current playback time raises a RuntimeError (e.g., seeked past the end),
+        clear the stored resume point.
+        
+        Parameters:
+            time_to_seek (float): The target time position of the seek (seconds).
+            seek_offset (float): The relative offset of the seek from the previous position (seconds).
+        """
         Logger.info(f'onPlayBackSeek time {time_to_seek}, seekOffset {seek_offset}')
         try:
             self.update_resume_point(self.getTime())
@@ -229,9 +251,12 @@ class KodiPlayer(xbmc.Player):
 
     def resume_if_was_playing(self):
         """
-        Automatically resume a video after a crash, if one was playing...
-
-        :return:
+        Attempt to resume playback after a previous shutdown if resuming is enabled and saved resume data exist.
+        
+        If configured and valid resume data are present, the player will start the saved file and seek to the stored resume time; on any failure or if no resume data are applicable, no playback is resumed.
+        
+        Returns:
+            True if playback was resumed and seeked to the saved position, False otherwise.
         """
 
         if Store.resume_on_startup \
@@ -271,9 +296,13 @@ class KodiPlayer(xbmc.Player):
 
     def get_random_library_video(self):
         """
-        Get a random video from the library for playback
-
-        :return:
+        Selects a random video file path from the Kodi library.
+        
+        Chooses among episodes, movies, and music videos and returns the file path of a randomly selected item if one exists. Updates Store.video_types_in_library to reflect whether a given type is present. If the library contains no eligible videos, no selection is made.
+        
+        Returns:
+            str: File path of the selected video.
+            False: If no episodes, movies, or music videos exist in the library.
         """
 
         # Short circuit if library is empty
