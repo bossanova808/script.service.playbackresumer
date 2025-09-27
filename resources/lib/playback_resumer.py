@@ -1,11 +1,12 @@
-from bossanova808.utilities import *
-# noinspection PyPackages
-from .store import Store
 import xbmc
 # noinspection PyPackages
 from .monitor import KodiEventMonitor
 # noinspection PyPackages
 from .player import KodiPlayer
+# noinspection PyPackages
+from .store import Store
+
+from bossanova808.logger import Logger
 
 
 def run():
@@ -14,7 +15,7 @@ def run():
 
     :return:
     """
-    footprints()
+    Logger.start()
     # load settings and create the store for our globals
     Store()
     Store.kodi_event_monitor = KodiEventMonitor(xbmc.Monitor)
@@ -26,7 +27,8 @@ def run():
 
     while not Store.kodi_event_monitor.abortRequested():
         if Store.kodi_event_monitor.waitForAbort(1):
+            Logger.debug('onAbortRequested')
             # Abort was requested while waiting. We should exit
             break
 
-    footprints(False)
+    Logger.stop()

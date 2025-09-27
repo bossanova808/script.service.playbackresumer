@@ -14,5 +14,4 @@ class KodiEventMonitor(xbmc.Monitor):
         Logger.info('onSettingsChanged - reload them.')
         Store.load_config_from_settings()
 
-    def onAbortRequested(self):
-        Logger.debug('onAbortRequested')
+

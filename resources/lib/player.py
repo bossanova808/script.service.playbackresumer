@@ -2,7 +2,7 @@ from random import randint
 
 from bossanova808.logger import Logger
 from bossanova808.notify import Notify
-from bossanova808.utilities import *
+from bossanova808.utilities import send_kodi_json
 
 # noinspection PyPackages
 from .store import Store
@@ -17,6 +17,7 @@ class KodiPlayer(xbmc.Player):
     This class represents/monitors the Kodi video player
     """
 
+    # noinspection PyUnusedLocal
     def __init__(self, *args):
         xbmc.Player.__init__(self)
         Logger.debug('KodiPlayer __init__')
@@ -35,8 +36,8 @@ class KodiPlayer(xbmc.Player):
         Logger.info("onPlayBackStopped")
         self.update_resume_point(-2)
 
-    def onPlayBackSeek(self, time, seekOffset):
-        Logger.info(f'onPlayBackSeek time {time}, seekOffset {seekOffset}')
+    def onPlayBackSeek(self, time_to_seek, seek_offset):
+        Logger.info(f'onPlayBackSeek time {time_to_seek}, seekOffset {seek_offset}')
         try:
             self.update_resume_point(self.getTime())
         except RuntimeError:
@@ -242,7 +243,7 @@ class KodiPlayer(xbmc.Player):
                     resume_point = float(f.read())
                 except Exception:
                     Logger.error("Error reading resume point from file, therefore not resuming.")
-                    return
+                    return False
 
             # neg 1 means the video wasn't playing when Kodi ended
             if resume_point < 0:
@@ -280,9 +281,11 @@ class KodiPlayer(xbmc.Player):
                 and not Store.video_types_in_library['movies'] \
                 and not Store.video_types_in_library['musicvideos']:
             Logger.warning('No episodes, movies, or music videos exist in the Kodi library. Cannot autoplay a random video.')
-            return
+            return False
 
         random_int = randint(0, 2)
+        result_type = None
+        method = None
         if random_int == 0:
             result_type = 'episodes'
             method = "GetEpisodes"
