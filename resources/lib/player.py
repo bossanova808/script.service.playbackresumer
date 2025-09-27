@@ -2,7 +2,7 @@ from random import randint
 
 from bossanova808.logger import Logger
 from bossanova808.notify import Notify
-from bossanova808.utilities import *
+from bossanova808.utilities import send_kodi_json
 
 # noinspection PyPackages
 from .store import Store
@@ -17,7 +17,14 @@ class KodiPlayer(xbmc.Player):
     This class represents/monitors the Kodi video player
     """
 
+    # noinspection PyUnusedLocal
     def __init__(self, *args):
+        """
+        Initialize the KodiPlayer instance and bind it to xbmc.Player.
+        
+        Parameters:
+            *args: Optional positional arguments accepted for compatibility; any values passed are ignored.
+        """
         xbmc.Player.__init__(self)
         Logger.debug('KodiPlayer __init__')
 
@@ -32,11 +39,27 @@ class KodiPlayer(xbmc.Player):
         self.autoplay_random_if_enabled()
 
     def onPlayBackStopped(self):
+        """
+        Handle the playback-stopped event and mark the current resume point as managed by Kodi.
+        
+        When playback stops, record a sentinel resume value indicating that Kodi should retain or handle the resume point (internal sentinel -2).
+        """
         Logger.info("onPlayBackStopped")
         self.update_resume_point(-2)
 
-    def onPlayBackSeek(self, time, seekOffset):
-        Logger.info(f'onPlayBackSeek time {time}, seekOffset {seekOffset}')
+    def onPlayBackSeek(self, time_to_seek, seek_offset):
+        """
+        Handle a user-initiated seek during playback and update the stored resume point.
+        
+        When a seek occurs, attempt to record the current playback time as the resume point.
+        If reading the current playback time raises a RuntimeError (e.g., seeked past the end),
+        clear the stored resume point.
+        
+        Parameters:
+            time_to_seek (float): The target time position of the seek (seconds).
+            seek_offset (float): The relative offset of the seek from the previous position (seconds).
+        """
+        Logger.info(f'onPlayBackSeek time {time_to_seek}, seekOffset {seek_offset}')
         try:
             self.update_resume_point(self.getTime())
         except RuntimeError:
@@ -228,9 +251,12 @@ class KodiPlayer(xbmc.Player):
 
     def resume_if_was_playing(self):
         """
-        Automatically resume a video after a crash, if one was playing...
-
-        :return:
+        Attempt to resume playback after a previous shutdown if resuming is enabled and saved resume data exist.
+        
+        If configured and valid resume data are present, the player will start the saved file and seek to the stored resume time; on any failure or if no resume data are applicable, no playback is resumed.
+        
+        Returns:
+            True if playback was resumed and seeked to the saved position, False otherwise.
         """
 
         if Store.resume_on_startup \
@@ -242,7 +268,7 @@ class KodiPlayer(xbmc.Player):
                     resume_point = float(f.read())
                 except Exception:
                     Logger.error("Error reading resume point from file, therefore not resuming.")
-                    return
+                    return False
 
             # neg 1 means the video wasn't playing when Kodi ended
             if resume_point < 0:
@@ -270,9 +296,13 @@ class KodiPlayer(xbmc.Player):
 
     def get_random_library_video(self):
         """
-        Get a random video from the library for playback
-
-        :return:
+        Selects a random video file path from the Kodi library.
+        
+        Chooses among episodes, movies, and music videos and returns the file path of a randomly selected item if one exists. Updates Store.video_types_in_library to reflect whether a given type is present. If the library contains no eligible videos, no selection is made.
+        
+        Returns:
+            str: File path of the selected video.
+            False: If no episodes, movies, or music videos exist in the library.
         """
 
         # Short circuit if library is empty
@@ -280,9 +310,11 @@ class KodiPlayer(xbmc.Player):
                 and not Store.video_types_in_library['movies'] \
                 and not Store.video_types_in_library['musicvideos']:
             Logger.warning('No episodes, movies, or music videos exist in the Kodi library. Cannot autoplay a random video.')
-            return
+            return False
 
         random_int = randint(0, 2)
+        result_type = None
+        method = None
         if random_int == 0:
             result_type = 'episodes'
             method = "GetEpisodes"
