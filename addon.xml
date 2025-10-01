@@ -7,8 +7,12 @@
   <extension point="xbmc.service" library="default.py" />
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">Periodically sets the resume point of videos and can automatically resume last played video if Kodi crashes.</summary>
+    <summary lang="sv_SE">Ställer in återuppspelningspunkten för videor med jämna mellanrum och kan automatiskt återuppspela den senast spelade videon om Kodi kraschar.</summary>
     <description lang="en_GB">
         Runs as a service and will periodically update the resume point while videos are playing, so you can re-start from where you were in the event of a crash.  It can also automatically resume a video if Kodi was shutdown while playing it. See setting to configure how often the resume point is set, and whether to automatically resume.
+    </description>
+    <description lang="sv_SE">
+        Körs som en tjänst och uppdaterar regelbundet återuppspelningspunkten vid spelning medan videor spelas upp, så att du kan starta om från där du var i händelse av ett krascher. Den kan också automatiskt återuppspela en video om Kodi stängdes av vid spelning. Se inställningarna för att konfigurera hur ofta återuppspelningspunkten ska ställas in och om den ska återuppspelas automatiskt.
     </description>
     <platform>all</platform>
 	  <license>GPL-3.0-only</license>
@@ -24,5 +28,6 @@
     </assets>
   </extension>
 </addon>
+
 
 
