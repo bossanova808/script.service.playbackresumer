@@ -1,4 +1,4 @@
-Kodi 播放恢复器
+Kodi Playback Resumer
 =========================================================
 `script.service.playbackresumer`
 
