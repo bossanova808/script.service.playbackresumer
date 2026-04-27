@@ -16,8 +16,7 @@
         Körs som en tjänst och uppdaterar regelbundet återuppspelningspunkten vid spelning medan videor spelas upp, så att du kan starta om från där du var i händelse av ett krascher. Den kan också automatiskt återuppspela en video om Kodi stängdes av vid spelning. Se inställningarna för att konfigurera hur ofta återuppspelningspunkten ska ställas in och om den ska återuppspelas automatiskt.
     </description>
     <description lang="zh_CN">
-        以后台服务形式运行，播放视频时会定期更新播放进度。当程序意外崩溃后，可从上次观看位置继续播放。
-        同时支持在播放期间非正常关闭 Kodi 时自动续播。你可在插件设置中调整进度保存频率，以及开关自动续播功能。
+        以后台服务形式运行，播放视频时会定期更新播放进度。当程序意外崩溃后，可从上次观看位置继续播放。同时支持在播放期间非正常关闭 Kodi 时自动续播。你可在插件设置中调整进度保存频率，以及开关自动续播功能。
     </description>
     <platform>all</platform>
 	  <license>GPL-3.0-only</license>
