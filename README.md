@@ -14,7 +14,7 @@ Support is via the Kodi forum thread: <https://forum.kodi.tv/showthread.php?tid=
 
 
 
-### **@wabisabi926 submitted this translation of the above:
+#### User @wabisabi926 submitted this translation of the above:
 
 一个简单的插件，在后台自动定期更新当前播放视频的恢复点，确保在 Kodi 崩溃时不会丢失播放进度。
 
