@@ -310,7 +310,7 @@ class KodiPlayer(xbmc.Player):
 
         try:
             with open(Store.file_to_store_playback, 'r', encoding='utf-8') as f:
-                playback = Playback(**json.load(f))
+                playback = Playback.from_dict(json.load(f))
         except (OSError, ValueError, TypeError) as e:
             Logger.error(f"resume_if_was_playing: error reading/parsing stored playback, therefore not resuming: {e}")
             return False

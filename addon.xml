@@ -3,7 +3,6 @@
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
     <import addon="script.module.bossanova808" version="1.0.3"/>
-    <import addon="script.module.infotagger" version="0.0.7"/>
   </requires>
   <extension point="xbmc.service" library="default.py" />
   <extension point="xbmc.addon.metadata">
@@ -30,7 +29,7 @@
 - Startup resume now uses Kodi's own StartOffset/PlayMedia resume mechanism instead of a manual seek after playback starts, fixing a range of resume-reliability issues
 - Added proper support for resuming PVR live TV (retunes the channel) and PVR recordings (resumes from Kodi/the PVR backend's own tracked position) on startup, both with correct channel/playback controls
 - Resume notifications now show a timestamp, and distinguish live TV/recordings from other video
-- Requires script.module.infotagger and script.module.bossanova808 1.0.3
+- Requires script.module.bossanova808 1.0.3
 
 v2.0.10
 - Fixed the startup resume seek silently failing (video would auto-play from 0:00 despite the "Resuming at X:XX" notification): the addon now waits for playback to actually be ready before seeking, then verifies the seek landed and retries if not
