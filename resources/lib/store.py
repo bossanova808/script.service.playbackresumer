@@ -1,13 +1,11 @@
 import os
-import json
 import xml.etree.ElementTree as ElementTree
 
-import xbmc
 import xbmcvfs
 
-from bossanova808.constants import PROFILE, ADDON
+from bossanova808.constants import PROFILE
 from bossanova808.logger import Logger
-from bossanova808.utilities import get_setting, get_setting_as_bool
+from bossanova808.utilities import get_setting, get_setting_as_bool, send_kodi_json
 
 
 class Store:
@@ -109,7 +107,7 @@ class Store:
         """
         Logger.info("Loading configuration")
 
-        Store.save_interval_seconds = int(float(ADDON.getSetting("saveintervalsecs")))
+        Store.save_interval_seconds = int(float(get_setting("saveintervalsecs") or 30))
         Store.resume_on_startup = get_setting_as_bool("resumeonstartup")
         Store.autoplay_random = get_setting_as_bool("autoplayrandom")
         Store.log_configuration()
@@ -199,15 +197,14 @@ class Store:
             "id": "fileDetailsCheck"
         }
 
-        Logger.info(f'Executing JSON-RPC: {json.dumps(query)}')
-        json_response = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
-        Logger.info(f'JSON-RPC Files.GetFileDetails response: {json.dumps(json_response)}')
+        json_response = send_kodi_json(f'Get file details for: {filepath}', query)
 
         try:
             Store.type_of_video = json_response['result']['filedetails']['type']
-        except KeyError:
+        except (KeyError, TypeError):
             Store.library_id = -1
             Logger.info(f"ERROR: Kodi did not return even an 'unknown' file type for: {Store.currently_playing_file_path}")
+            return
 
         if Store.type_of_video in ['episode', 'movie', 'musicvideo']:
             Store.library_id = json_response['result']['filedetails']['id']

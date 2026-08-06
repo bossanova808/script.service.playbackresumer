@@ -444,14 +444,13 @@ class KodiPlayer(xbmc.Player):
                 }
         }
 
-        Logger.info(f'Executing JSON-RPC: {json.dumps(query)}')
-        json_response = json.loads(xbmc.executeJSONRPC(json.dumps(query)))
-        Logger.info(f'JSON-RPC VideoLibrary.{method} response: {json.dumps(json_response)}')
+        json_response = send_kodi_json(f'Get a random video from: {result_type}', query)
+        result = json_response.get('result') if json_response else None
 
         # found a video!
-        if json_response['result']['limits']['total'] > 0:
+        if result and result.get('limits', {}).get('total', 0) > 0:
             Store.video_types_in_library[result_type] = True
-            return json_response['result'][result_type][0]['file']
+            return result[result_type][0]['file']
         # no videos of this type
         else:
             Logger.info("There are no " + result_type + " in the library")
