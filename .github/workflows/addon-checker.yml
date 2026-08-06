@@ -19,9 +19,9 @@ jobs:
 
     - name: Export addon files via git archive (matches what actually gets submitted - respects .gitattributes export-ignore)
       run: |
-        mkdir export
-        git archive HEAD | tar -x -C export
+        mkdir -p export/${{ github.event.repository.name }}
+        git archive HEAD | tar -x -C export/${{ github.event.repository.name }}
 
     - name: Run addon checker
       run: |
-        kodi-addon-checker --branch matrix export
+        kodi-addon-checker --branch matrix export/${{ github.event.repository.name }}
