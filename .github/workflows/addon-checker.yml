@@ -16,8 +16,12 @@ jobs:
     - name: Install kodi-addon-checker
       run: |
         pip install kodi-addon-checker
-    
+
+    - name: Export addon files via git archive (matches what actually gets submitted - respects .gitattributes export-ignore)
+      run: |
+        mkdir export
+        git archive HEAD | tar -x -C export
+
     - name: Run addon checker
       run: |
-        kodi-addon-checker --branch matrix .
-        
+        kodi-addon-checker --branch matrix export
