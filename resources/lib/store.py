@@ -5,7 +5,7 @@ import xbmcvfs
 
 from bossanova808.constants import PROFILE
 from bossanova808.logger import Logger
-from bossanova808.utilities import get_setting, get_setting_as_bool, send_kodi_json
+from bossanova808.utilities import get_setting, get_setting_as_bool
 
 
 class Store:
@@ -23,28 +23,16 @@ class Store:
     kodi_event_monitor = None
     player_monitor = None
 
-    # True while a startup resume seek (see player.resume_if_was_playing) is being
-    # attempted/verified. Used (non-blockingly) to avoid the periodic save loop clobbering a
-    # fresh resume seek before it's confirmed.
-    currently_resuming = False
-
-    # Store the full path of the currently playing file
-    currently_playing_file_path = ''
-    # What type of video is it?  episode, movie, musicvideo
-    type_of_video = None
-    # What is the library id of this video, if there is one?
-    library_id = -1
+    # The currently playing item, as detected by bossanova808.playback.Playback
+    current_playback = None
     # if the video was paused, at what time was it paused?
     paused_time = None
-    # how long is the currently playing video (so we can ignorepercentatend)
-    length_of_currently_playing_file = 0
 
     # Is this type of video in the library?  These start as true and are set to false if later not found.
     video_types_in_library = {'episodes': True, 'movies': True, 'musicvideos': True}
 
-    # Persistently store some things, for e.g. access after a re-start
-    file_to_store_last_played = ''
-    file_to_store_resume_point = ''
+    # Persistently store the current playback (as Playback JSON), for resuming after a re-start
+    file_to_store_playback = ''
 
     def __init__(self):
         """
@@ -56,9 +44,8 @@ class Store:
         if not os.path.exists(PROFILE):
             os.makedirs(PROFILE)
 
-        # Two files to persistently track the last played file and the resume point
-        Store.file_to_store_last_played = os.path.join(PROFILE, "lastplayed.txt")
-        Store.file_to_store_resume_point = os.path.join(PROFILE, "resumepoint.txt")
+        # One file to persistently track the current playback (path, metadata, resume point)
+        Store.file_to_store_playback = os.path.join(PROFILE, "playback.json")
 
         # Have to read this in ourselves as there appears to be no plugin function to access it...
         advancedsettings_file = xbmcvfs.translatePath("special://profile/advancedsettings.xml")
@@ -89,15 +76,10 @@ class Store:
         :return:
         """
         Logger.info("New playback - clearing legacy now playing details")
-        Store.library_id = None
-        Store.currently_playing_file_path = None
-        Store.type_of_video = None
+        Store.current_playback = None
         Store.paused_time = None
-        Store.length_of_currently_playing_file = None
-        with open(Store.file_to_store_last_played, 'w+', encoding='utf-8') as f:
-            f.write('')
-        with open(Store.file_to_store_resume_point, 'w+') as f:
-            f.write('')
+        if os.path.exists(Store.file_to_store_playback):
+            os.remove(Store.file_to_store_playback)
 
     @staticmethod
     def load_config_from_settings():
@@ -159,56 +141,3 @@ class Store:
                 return True
 
         return False
-
-    @staticmethod
-    def update_current_playing_file_path(filepath):
-        """
-        Persistently tracks the currently playing file (in case of crash, for possible resuming)
-
-        :param filepath:
-        :return:
-        """
-
-        if Store.is_excluded(filepath):
-            Logger.info("Skipping excluded filepath: " + filepath)
-            Store.currently_playing_file_path = None
-            return
-
-        Store.currently_playing_file_path = filepath
-
-        # write the full path to a file for persistent tracking
-        with open(Store.file_to_store_last_played, 'w+', encoding='utf8') as f:
-            f.write(filepath)
-
-        Logger.info(f'Last played file set to: {filepath}')
-
-        # check if it is a library video and if so store the library_id and type_of_video
-        query = {
-            "jsonrpc": "2.0",
-            "method": "Files.GetFileDetails",
-            "params": {
-                "file": filepath,
-                "media": "video",
-                "properties": [
-                    "playcount",
-                    "runtime"
-                ]
-            },
-            "id": "fileDetailsCheck"
-        }
-
-        json_response = send_kodi_json(f'Get file details for: {filepath}', query)
-
-        try:
-            Store.type_of_video = json_response['result']['filedetails']['type']
-        except (KeyError, TypeError):
-            Store.library_id = -1
-            Logger.info(f"ERROR: Kodi did not return even an 'unknown' file type for: {Store.currently_playing_file_path}")
-            return
-
-        if Store.type_of_video in ['episode', 'movie', 'musicvideo']:
-            Store.library_id = json_response['result']['filedetails']['id']
-        else:
-            Store.library_id = None
-
-        Logger.info(f'Kodi type: {Store.type_of_video}, library id: {Store.library_id}')
