@@ -30,10 +30,6 @@
 - Added proper support for resuming PVR live TV (retunes the channel) and PVR recordings (resumes from Kodi/the PVR backend's own tracked position) on startup, both with correct channel/playback controls
 - Resume notifications now show a timestamp, and distinguish live TV/recordings from other video
 - Requires script.module.bossanova808 1.0.3
-
-v2.0.10
-- Fixed the startup resume seek silently failing (video would auto-play from 0:00 despite the "Resuming at X:XX" notification): the addon now waits for playback to actually be ready before seeking, then verifies the seek landed and retries if not
-- Fixed a rare crash on startup during a resume, which in turn caused the *next* startup's resume to silently fail too (no video was playing at Kodi's last shutdown)
     </news>
     <assets>
       <icon>icon.png</icon>

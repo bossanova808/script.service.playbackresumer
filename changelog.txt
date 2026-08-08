@@ -1,3 +1,10 @@
+v2.2.0
+- Major internal rewrite: playback tracking and resume now use the shared Playback class from script.module.bossanova808
+- Startup resume now uses Kodi's own StartOffset/PlayMedia resume mechanism instead of a manual seek after playback starts, fixing a range of resume-reliability issues
+- Added proper support for resuming PVR live TV (retunes the channel) and PVR recordings (resumes from Kodi/the PVR backend's own tracked position) on startup, both with correct channel/playback controls
+- Resume notifications now show a timestamp, and distinguish live TV/recordings from other video
+- Requires script.module.bossanova808 1.0.3
+
 v2.0.10
 - Fixed a bug where the startup resume seek could silently fail - video would auto-play from
   0:00 despite the "Resuming at X:XX" notification showing the correct saved time:
