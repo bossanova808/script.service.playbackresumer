@@ -388,12 +388,15 @@ class KodiPlayer(xbmc.Player):
                 Logger.warning(f"resume_if_was_playing: giving up after {max_attempts} attempt(s) - playback never started")
                 return False
 
+            image = playback.poster or playback.icon
             if is_live:
-                Notify.info(f'Resuming live TV: {playback.pluginlabel_short}')
+                # Retuning live TV involves Kodi spinning up a full PVR session (buffering etc),
+                # which can take several seconds - call this out so it doesn't read as broken
+                Notify.kodi_notification(f'Re-tuning live TV: {playback.pluginlabel_short} (this may take a moment)', 5000, image)
             elif is_recording:
-                Notify.info(f'Resuming recording: {playback.pluginlabel_short} at {str_timestamp}')
+                Notify.kodi_notification(f'Resuming PVR Recording: {playback.pluginlabel_short} at {str_timestamp}', 5000, image)
             else:
-                Notify.info(f'Resuming: {playback.pluginlabel_short} at {str_timestamp}')
+                Notify.kodi_notification(f'Resuming: {playback.pluginlabel_short} at {str_timestamp}', 5000, image)
             return True
 
         except Exception as e:
