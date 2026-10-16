@@ -82,7 +82,7 @@ class KodiPlayer(xbmc.Player):
         Store.clear_old_play_details()
 
         if not self.isPlayingVideo():
-            Logger.info("Not playing a video - skipping: " + self.getPlayingFile())
+            Logger.info("Not playing a video - skipping" + (f": {self.getPlayingFile()}" if self.isPlaying() else ""))
             return
 
         xbmc.sleep(1500)  # give it a bit to start playing and let the stopped method finish
